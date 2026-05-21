@@ -1,0 +1,1135 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>悬浮球交付物验收工具</title>
+  <style>
+    :root {
+      --bg: #f6f7f9;
+      --panel: #ffffff;
+      --panel-soft: #f1f4f7;
+      --text: #17202a;
+      --muted: #667085;
+      --line: #d9e0e7;
+      --ok: #0b7f48;
+      --warn: #a05a00;
+      --bad: #b42318;
+      --blue: #1769e0;
+      --shadow: 0 18px 45px rgba(20, 32, 47, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 14px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    button, input { font: inherit; }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 320px minmax(0, 1fr);
+    }
+
+    aside {
+      border-right: 1px solid var(--line);
+      background: #fbfcfd;
+      padding: 24px;
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      overflow: auto;
+    }
+
+    main {
+      padding: 24px;
+      min-width: 0;
+    }
+
+    h1, h2, h3, p { margin: 0; }
+
+    h1 {
+      font-size: 22px;
+      line-height: 1.25;
+      margin-bottom: 10px;
+      letter-spacing: 0;
+    }
+
+    h2 {
+      font-size: 17px;
+      line-height: 1.3;
+      margin-bottom: 14px;
+    }
+
+    h3 {
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+
+    .lead {
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+
+    .upload {
+      display: block;
+      border: 1px dashed #9aa8b7;
+      background: #fff;
+      border-radius: 8px;
+      padding: 16px;
+      cursor: pointer;
+      margin-bottom: 18px;
+    }
+
+    .upload strong {
+      display: block;
+      font-size: 15px;
+      margin-bottom: 4px;
+    }
+
+    .upload span {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .upload input {
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      position: absolute;
+      pointer-events: none;
+    }
+
+    .upload-group {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .rule-list {
+      display: grid;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .rule-chip {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      padding: 9px 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      color: #344054;
+      font-size: 13px;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #98a2b3;
+      flex: 0 0 auto;
+      margin-top: 6px;
+    }
+
+    .summary {
+      display: grid;
+      grid-template-columns: minmax(220px, 1.2fr) repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .metric {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 14px;
+      box-shadow: var(--shadow);
+      min-width: 0;
+    }
+
+    .metric.verdict {
+      color: #fff;
+      border-color: transparent;
+      background: #475467;
+    }
+
+    .metric.verdict.pass { background: var(--ok); }
+    .metric.verdict.warn { background: var(--warn); }
+    .metric.verdict.fail { background: var(--bad); }
+
+    .metric.pass-metric {
+      border-color: #9dd8bd;
+      background: #e8f6ef;
+    }
+
+    .metric.warn-metric {
+      border-color: #ffd38a;
+      background: #fff2d8;
+    }
+
+    .metric.fail-metric {
+      border-color: #f7a6a0;
+      background: #fde8e6;
+    }
+
+    .metric.manual-metric {
+      border-color: #b8c2cc;
+      background: #eef1f4;
+    }
+
+    .metric .value {
+      display: block;
+      font-size: 28px;
+      font-weight: 700;
+      line-height: 1;
+      margin-bottom: 6px;
+    }
+
+    .metric .label {
+      color: var(--muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .metric.verdict .label { color: rgba(255, 255, 255, 0.86); }
+
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 18px;
+    }
+
+    .folder-name {
+      min-width: 0;
+      color: var(--muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .actions {
+      display: flex;
+      gap: 8px;
+      flex: 0 0 auto;
+    }
+
+    .btn {
+      border: 1px solid #b8c2cc;
+      color: #17202a;
+      background: #fff;
+      border-radius: 7px;
+      padding: 8px 11px;
+      cursor: pointer;
+    }
+
+    .btn.primary {
+      background: var(--blue);
+      border-color: var(--blue);
+      color: #fff;
+    }
+
+    .btn:disabled {
+      color: #98a2b3;
+      cursor: not-allowed;
+      background: #eef1f4;
+      border-color: #d0d5dd;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .panel-head {
+      padding: 16px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .panel-body { padding: 16px; }
+
+    .checks {
+      display: grid;
+      gap: 10px;
+    }
+
+    .check {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      background: #fff;
+    }
+
+    .check-top {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      justify-content: space-between;
+    }
+
+    .check-title {
+      font-weight: 650;
+      min-width: 0;
+    }
+
+    .check-detail {
+      color: var(--muted);
+      margin-top: 5px;
+      word-break: break-word;
+    }
+
+    .badge {
+      border-radius: 999px;
+      padding: 3px 9px;
+      font-size: 12px;
+      line-height: 1.4;
+      white-space: nowrap;
+      font-weight: 650;
+    }
+
+    .pass { color: var(--ok); background: #e8f6ef; }
+    .warn { color: var(--warn); background: #fff2d8; }
+    .fail { color: var(--bad); background: #fde8e6; }
+    .manual { color: #344054; background: #eef1f4; }
+
+    .table-wrap { overflow: auto; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 660px;
+    }
+
+    th, td {
+      padding: 10px 9px;
+      border-bottom: 1px solid var(--line);
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      color: #475467;
+      font-size: 12px;
+      background: var(--panel-soft);
+      position: sticky;
+      top: 0;
+    }
+
+    td { font-size: 13px; }
+
+    code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      background: #eef1f4;
+      border-radius: 5px;
+      padding: 1px 5px;
+    }
+
+    .manual-list {
+      display: grid;
+      gap: 9px;
+    }
+
+    .manual-item {
+      display: flex;
+      gap: 9px;
+      align-items: flex-start;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px;
+      background: #fff;
+    }
+
+    .manual-item input {
+      margin-top: 4px;
+      width: 16px;
+      height: 16px;
+      accent-color: var(--blue);
+    }
+
+    .manual-item div { min-width: 0; }
+
+    .manual-item small {
+      display: block;
+      color: var(--muted);
+      margin-top: 2px;
+    }
+
+    .empty {
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      padding: 38px 18px;
+      color: var(--muted);
+      text-align: center;
+      background: #fff;
+    }
+
+    .preview-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 12px;
+    }
+
+    .preview-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 10px;
+      min-width: 0;
+    }
+
+    .preview-card img {
+      display: block;
+      max-width: 100%;
+      height: 132px;
+      object-fit: contain;
+      margin: 0 auto 8px;
+      background: linear-gradient(45deg, #eef1f4 25%, transparent 25%),
+        linear-gradient(-45deg, #eef1f4 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #eef1f4 75%),
+        linear-gradient(-45deg, transparent 75%, #eef1f4 75%);
+      background-size: 16px 16px;
+      background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+    }
+
+    .preview-card .name {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      font-weight: 650;
+    }
+
+    .preview-card .meta {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 2px;
+    }
+
+    .report {
+      width: 100%;
+      min-height: 180px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 12px;
+      color: #344054;
+      background: #fff;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    @media (max-width: 980px) {
+      .app { grid-template-columns: 1fr; }
+      aside {
+        position: static;
+        height: auto;
+        border-right: 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .grid, .summary { grid-template-columns: 1fr; }
+      .toolbar { align-items: stretch; flex-direction: column; }
+      .actions { flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside>
+      <h1>悬浮球交付物验收工具</h1>
+      <p class="lead">选择交付文件夹或 ZIP 后，在本地浏览器内完成检查，不上传文件。</p>
+
+      <div class="upload-group">
+        <label class="upload">
+          <strong>选择交付文件夹</strong>
+          <span>建议直接选择「XX活动悬浮球物料交付日期@姓名」这一层</span>
+          <input id="folderInput" type="file" webkitdirectory directory multiple>
+        </label>
+        <label class="upload">
+          <strong>上传 ZIP 压缩包</strong>
+          <span>支持常见 ZIP，文件仍只在本地浏览器内解析</span>
+          <input id="zipInput" type="file" accept=".zip,application/zip,application/x-zip-compressed">
+        </label>
+      </div>
+
+      <h3>当前规则</h3>
+      <div class="rule-list">
+        <div class="rule-chip"><span class="dot"></span><span>只交付 1 个文件夹，文件夹内包含常规态和吸边态。</span></div>
+        <div class="rule-chip"><span class="dot"></span><span>交付文件夹命名应包含活动、悬浮球物料交付、日期和负责人。</span></div>
+        <div class="rule-chip"><span class="dot"></span><span>文件名可读，避免「悬浮球111」「福袋改2」等无意义命名。</span></div>
+        <div class="rule-chip"><span class="dot"></span><span>常规态 JSON 不超过 100KB，建议压缩到 40KB 以下。</span></div>
+        <div class="rule-chip"><span class="dot"></span><span>吸边态 PNG 尺寸必须为 99 x 300。</span></div>
+      </div>
+    </aside>
+
+    <main>
+      <div class="toolbar">
+        <div class="folder-name" id="folderName">尚未选择文件夹</div>
+        <div class="actions">
+          <button class="btn" id="copyReportBtn" disabled>复制报告</button>
+          <button class="btn primary" id="downloadReportBtn" disabled>下载报告</button>
+        </div>
+      </div>
+
+      <section class="summary">
+        <div class="metric verdict" id="verdictMetric"><span class="value" id="verdictText">待审核</span><span class="label" id="verdictDetail">选择文件夹或 ZIP 后生成结论</span></div>
+        <div class="metric pass-metric"><span class="value" id="passCount">0</span><span class="label">通过</span></div>
+        <div class="metric warn-metric"><span class="value" id="warnCount">0</span><span class="label">警告</span></div>
+        <div class="metric fail-metric"><span class="value" id="failCount">0</span><span class="label">失败</span></div>
+        <div class="metric manual-metric"><span class="value" id="manualCount">0</span><span class="label">待人工确认</span></div>
+      </section>
+
+      <div class="grid">
+        <section class="panel">
+          <div class="panel-head">
+            <h2>自动检查</h2>
+            <span class="badge manual" id="auditState">等待选择</span>
+          </div>
+          <div class="panel-body">
+            <div class="empty" id="emptyState">选择文件夹后开始审核。</div>
+            <div class="checks" id="checks"></div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-head">
+            <h2>人工确认</h2>
+          </div>
+          <div class="panel-body">
+            <div class="manual-list" id="manualList"></div>
+          </div>
+        </section>
+      </div>
+
+      <section class="panel" style="margin-top:18px;">
+        <div class="panel-head">
+          <h2>物料明细</h2>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>类型</th>
+                <th>名称</th>
+                <th>路径</th>
+                <th>尺寸 / 体积</th>
+                <th>状态</th>
+              </tr>
+            </thead>
+            <tbody id="assetRows">
+              <tr><td colspan="5">暂无数据</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="panel" style="margin-top:18px;">
+        <div class="panel-head">
+          <h2>吸边图预览</h2>
+        </div>
+        <div class="panel-body">
+          <div class="preview-grid" id="previewGrid"></div>
+        </div>
+      </section>
+
+      <section class="panel" style="margin-top:18px;">
+        <div class="panel-head">
+          <h2>验收报告</h2>
+        </div>
+        <div class="panel-body">
+          <textarea class="report" id="reportText" readonly>选择文件夹后生成报告。</textarea>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const input = document.getElementById("folderInput");
+    const zipInput = document.getElementById("zipInput");
+    const checksEl = document.getElementById("checks");
+    const emptyEl = document.getElementById("emptyState");
+    const manualListEl = document.getElementById("manualList");
+    const rowsEl = document.getElementById("assetRows");
+    const previewGridEl = document.getElementById("previewGrid");
+    const reportTextEl = document.getElementById("reportText");
+    const folderNameEl = document.getElementById("folderName");
+    const copyReportBtn = document.getElementById("copyReportBtn");
+    const downloadReportBtn = document.getElementById("downloadReportBtn");
+    const auditStateEl = document.getElementById("auditState");
+    const verdictMetricEl = document.getElementById("verdictMetric");
+    const verdictTextEl = document.getElementById("verdictText");
+    const verdictDetailEl = document.getElementById("verdictDetail");
+    const manualStorageKey = "delivery-audit-manual-checks";
+    let manualStateFallback = {};
+
+    const manualItems = [
+      {
+        id: "regular-frame",
+        title: "常规态首尾帧保持一致",
+        detail: "打开 demo 或 JSON 预览，确认循环衔接无跳变。"
+      },
+      {
+        id: "front-usage",
+        title: "常规态首帧正面利用率最大化",
+        detail: "确认首帧主体清楚、未明显留白、符合投放侧展示预期。"
+      },
+      {
+        id: "business-confirmed",
+        title: "已在运营悬浮球内审群确认",
+        detail: "按流程在群内 @吴茜 完成确认。"
+      }
+    ];
+
+    let latestAudit = null;
+    let latestReport = "";
+
+    input.addEventListener("change", async (event) => {
+      const files = [...event.target.files];
+      if (!files.length) return;
+      setBusy(true);
+      try {
+        latestAudit = await auditFiles(files);
+        render(latestAudit);
+      } catch (error) {
+        console.error(error);
+        renderError(error);
+      } finally {
+        setBusy(false);
+      }
+    });
+
+    zipInput.addEventListener("change", async (event) => {
+      const file = event.target.files && event.target.files[0];
+      if (!file) return;
+      setBusy(true);
+      try {
+        latestAudit = await auditZip(file);
+        render(latestAudit);
+      } catch (error) {
+        console.error(error);
+        renderError(error);
+      } finally {
+        setBusy(false);
+      }
+    });
+
+    copyReportBtn.addEventListener("click", async () => {
+      if (!latestReport) return;
+      await navigator.clipboard.writeText(latestReport);
+      copyReportBtn.textContent = "已复制";
+      setTimeout(() => copyReportBtn.textContent = "复制报告", 1200);
+    });
+
+    downloadReportBtn.addEventListener("click", () => {
+      if (!latestReport || !latestAudit) return;
+      const blob = new Blob([latestReport], { type: "text/plain;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `${latestAudit.rootName || "交付物"}-验收报告.txt`;
+      link.click();
+      URL.revokeObjectURL(url);
+    });
+
+    function setBusy(isBusy) {
+      auditStateEl.textContent = isBusy ? "检查中" : (latestAudit ? "已生成" : "等待选择");
+      auditStateEl.className = `badge ${isBusy ? "warn" : "manual"}`;
+    }
+
+    async function auditFiles(files) {
+      const normalized = files
+        .map((file) => ({
+          file,
+          path: normalizePath(file.webkitRelativePath || file.name),
+          size: file.size,
+          name: file.name
+        }))
+        .filter((item) => !isIgnored(item.path));
+
+      return auditItems(normalized, "folder");
+    }
+
+    async function auditZip(file) {
+      const entries = await readZipEntries(file);
+      if (!entries.length) {
+        throw new Error("ZIP 中没有可审核文件");
+      }
+      return auditItems(entries.filter((item) => !isIgnored(item.path)), "zip", file.name);
+    }
+
+    async function auditItems(normalized, sourceType, sourceName = "") {
+      const roots = [...new Set(normalized.map((item) => item.path.split("/")[0]).filter(Boolean))];
+      const rootName = roots.length === 1 ? roots[0] : "";
+      const rootPrefix = rootName ? `${rootName}/` : "";
+      const topLevel = normalized.map((item) => ({
+        ...item,
+        relative: item.path.startsWith(rootPrefix) ? item.path.slice(rootPrefix.length) : item.path
+      }));
+
+      const normalFolders = getTopLevelFolders(topLevel).filter((name) => /常规态/.test(name));
+      const suctionImages = topLevel.filter((item) => isTopLevel(item.relative) && getSuctionAssetName(item.name));
+      const jsonFiles = topLevel.filter((item) => /\.json$/i.test(item.name));
+      const imageInfos = await Promise.all(
+        suctionImages.map(async (item) => ({ ...item, image: await getImageInfo(item.file) }))
+      );
+      const lottieInfos = await Promise.all(
+        jsonFiles.map(async (item) => ({ ...item, lottie: await readJson(item.file) }))
+      );
+
+      const normalNames = normalFolders.map((name) => getNormalAssetName(name));
+      const suctionNames = suctionImages.map((item) => getSuctionAssetName(item.name));
+      const suspicious = topLevel.filter((item) => isSuspiciousName(item.name, item.relative));
+      const checks = [];
+
+      pushCheck(checks, roots.length === 1 ? "pass" : "fail", "只交付 1 个文件夹",
+        roots.length === 1 ? `当前选择：${rootName}` : `检测到 ${roots.length} 个顶层文件夹：${roots.join("、")}`);
+
+      pushCheck(checks, isDeliveryFolderName(rootName) ? "pass" : "fail", "交付文件夹命名",
+        rootName ? `当前命名：${rootName}` : "未能识别顶层交付文件夹");
+
+      pushCheck(checks, normalFolders.length > 0 && suctionImages.length > 0 ? "pass" : "fail", "包含常规态和吸边态",
+        `常规态 ${normalFolders.length} 个，吸边态 ${suctionImages.length} 个`);
+
+      const missingSuction = normalNames.filter((name) => !suctionNames.includes(name));
+      const missingNormal = suctionNames.filter((name) => !normalNames.includes(name));
+      pushCheck(checks, missingSuction.length || missingNormal.length ? "fail" : "pass", "常规态与吸边态成对交付",
+        missingSuction.length || missingNormal.length
+          ? `缺吸边：${missingSuction.join("、") || "无"}；缺常规态：${missingNormal.join("、") || "无"}`
+          : `已匹配：${normalNames.join("、") || "无"}`);
+
+      pushCheck(checks, suspicious.length ? "warn" : "pass", "文件命名可读性",
+        suspicious.length
+          ? `疑似需改名：${suspicious.map((item) => item.relative).join("、")}`
+          : "未发现明显无意义命名");
+
+      const jsonOver100 = lottieInfos.filter((item) => item.size > 100 * 1024);
+      const jsonOver40 = lottieInfos.filter((item) => item.size > 40 * 1024 && item.size <= 100 * 1024);
+      pushCheck(checks, jsonOver100.length ? "fail" : (jsonOver40.length ? "warn" : "pass"), "常规态 JSON 体积",
+        jsonOver100.length
+          ? `超过 100KB：${jsonOver100.map((item) => `${item.relative} ${formatSize(item.size)}`).join("、")}`
+          : (jsonOver40.length
+            ? `未超过 100KB，但建议继续压缩：${jsonOver40.map((item) => `${item.relative} ${formatSize(item.size)}`).join("、")}`
+            : `全部低于 40KB，共 ${lottieInfos.length} 个 JSON`));
+
+      const invalidJson = lottieInfos.filter((item) => item.lottie.error);
+      pushCheck(checks, invalidJson.length ? "fail" : "pass", "JSON 可解析",
+        invalidJson.length ? invalidJson.map((item) => `${item.relative}: ${item.lottie.error}`).join("；") : "全部 JSON 可正常解析");
+
+      const badSize = imageInfos.filter((item) => item.image.width !== 99 || item.image.height !== 300);
+      pushCheck(checks, badSize.length ? "fail" : "pass", "吸边态尺寸 99 x 300",
+        badSize.length
+          ? badSize.map((item) => `${item.relative}: ${item.image.width} x ${item.image.height}`).join("；")
+          : `全部 ${imageInfos.length} 张吸边图符合尺寸`);
+
+      const assets = buildAssets(normalFolders, imageInfos, lottieInfos);
+      return { rootName, roots, checks, assets, images: imageInfos, sourceType, sourceName };
+    }
+
+    async function readZipEntries(zipFile) {
+      const buffer = await zipFile.arrayBuffer();
+      const view = new DataView(buffer);
+      const eocdOffset = findEndOfCentralDirectory(view);
+      if (eocdOffset < 0) {
+        throw new Error("无法识别 ZIP 目录，请确认文件是标准 ZIP");
+      }
+
+      const totalEntries = view.getUint16(eocdOffset + 10, true);
+      const centralSize = view.getUint32(eocdOffset + 12, true);
+      const centralOffset = view.getUint32(eocdOffset + 16, true);
+      const centralEnd = centralOffset + centralSize;
+      const entries = [];
+      let offset = centralOffset;
+
+      for (let index = 0; index < totalEntries && offset < centralEnd; index += 1) {
+        if (view.getUint32(offset, true) !== 0x02014b50) {
+          throw new Error("ZIP 中央目录损坏，无法继续解析");
+        }
+
+        const flags = view.getUint16(offset + 8, true);
+        const method = view.getUint16(offset + 10, true);
+        const compressedSize = view.getUint32(offset + 20, true);
+        const uncompressedSize = view.getUint32(offset + 24, true);
+        const nameLength = view.getUint16(offset + 28, true);
+        const extraLength = view.getUint16(offset + 30, true);
+        const commentLength = view.getUint16(offset + 32, true);
+        const localHeaderOffset = view.getUint32(offset + 42, true);
+        const nameBytes = new Uint8Array(buffer, offset + 46, nameLength);
+        const path = decodeZipName(nameBytes, flags);
+
+        offset += 46 + nameLength + extraLength + commentLength;
+        if (!path || path.endsWith("/")) continue;
+        if (compressedSize === 0 && uncompressedSize === 0) continue;
+        if (view.getUint32(localHeaderOffset, true) !== 0x04034b50) {
+          throw new Error(`ZIP 本地文件头损坏：${path}`);
+        }
+
+        const localNameLength = view.getUint16(localHeaderOffset + 26, true);
+        const localExtraLength = view.getUint16(localHeaderOffset + 28, true);
+        const dataStart = localHeaderOffset + 30 + localNameLength + localExtraLength;
+        const compressed = new Uint8Array(buffer, dataStart, compressedSize);
+        const bytes = await inflateZipEntry(compressed, method, path);
+        const name = path.split("/").pop();
+        const file = new File([bytes], name, { type: guessMimeType(name) });
+        entries.push({ file, path: normalizePath(path), size: bytes.byteLength, name });
+      }
+
+      return entries;
+    }
+
+    function findEndOfCentralDirectory(view) {
+      const minOffset = Math.max(0, view.byteLength - 22 - 0xffff);
+      for (let offset = view.byteLength - 22; offset >= minOffset; offset -= 1) {
+        if (view.getUint32(offset, true) === 0x06054b50) return offset;
+      }
+      return -1;
+    }
+
+    function decodeZipName(bytes, flags) {
+      const utf8 = new TextDecoder("utf-8", { fatal: false }).decode(bytes);
+      if (flags & 0x0800) return utf8;
+      return utf8;
+    }
+
+    async function inflateZipEntry(bytes, method, path) {
+      if (method === 0) return bytes;
+      if (method !== 8) {
+        throw new Error(`不支持的 ZIP 压缩方式 ${method}：${path}`);
+      }
+      if (!("DecompressionStream" in window)) {
+        throw new Error("当前浏览器不支持本地解压 Deflate ZIP，请改用文件夹上传");
+      }
+      const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream("deflate-raw"));
+      const output = await new Response(stream).arrayBuffer();
+      return new Uint8Array(output);
+    }
+
+    function guessMimeType(name) {
+      if (/\.png$/i.test(name)) return "image/png";
+      if (/\.json$/i.test(name)) return "application/json";
+      if (/\.html?$/i.test(name)) return "text/html";
+      return "application/octet-stream";
+    }
+
+    function buildAssets(normalFolders, imageInfos, lottieInfos) {
+      const rows = [];
+      for (const folder of normalFolders) {
+        rows.push({
+          type: "常规态文件夹",
+          name: folder,
+          path: folder,
+          meta: "-",
+          status: "待预览确认"
+        });
+      }
+      for (const item of lottieInfos) {
+        const lottie = item.lottie.value;
+        const dim = lottie ? `${lottie.w || "-"} x ${lottie.h || "-"}，${lottie.fr || "-"}fps，${lottie.op || "-"}帧` : "解析失败";
+        rows.push({
+          type: "常规态 JSON",
+          name: item.name,
+          path: item.relative,
+          meta: `${formatSize(item.size)}；${dim}`,
+          status: item.size > 100 * 1024 || item.lottie.error ? "失败" : (item.size > 40 * 1024 ? "建议压缩" : "通过")
+        });
+      }
+      for (const item of imageInfos) {
+        rows.push({
+          type: "吸边态 PNG",
+          name: item.name,
+          path: item.relative,
+          meta: `${item.image.width} x ${item.image.height}；${formatSize(item.size)}`,
+          status: item.image.width === 99 && item.image.height === 300 ? "通过" : "失败"
+        });
+      }
+      return rows;
+    }
+
+    function render(audit) {
+      emptyEl.style.display = "none";
+      checksEl.innerHTML = audit.checks.map(renderCheck).join("");
+      folderNameEl.textContent = audit.rootName ? `当前文件夹：${audit.rootName}` : "当前选择包含多个顶层文件夹";
+      renderManual();
+      renderRows(audit.assets);
+      renderPreview(audit.images);
+      latestReport = buildReport(audit);
+      reportTextEl.value = latestReport;
+      copyReportBtn.disabled = false;
+      downloadReportBtn.disabled = false;
+
+      const counts = countChecks(audit.checks);
+      const pendingManual = getPendingManualCount();
+      document.getElementById("passCount").textContent = counts.pass;
+      document.getElementById("warnCount").textContent = counts.warn;
+      document.getElementById("failCount").textContent = counts.fail;
+      document.getElementById("manualCount").textContent = pendingManual;
+      const state = counts.fail ? "fail" : (counts.warn || pendingManual ? "warn" : "pass");
+      auditStateEl.textContent = counts.fail ? "存在失败项" : (counts.warn ? "存在警告项" : (pendingManual ? "待人工确认" : "验收通过"));
+      auditStateEl.className = `badge ${state}`;
+      verdictTextEl.textContent = counts.fail ? "不通过" : (counts.warn || pendingManual ? "需复核" : "通过");
+      verdictDetailEl.textContent = counts.fail
+        ? `${counts.fail} 个失败项需处理`
+        : (counts.warn ? `${counts.warn} 个警告项需确认` : (pendingManual ? `${pendingManual} 个人工项未确认` : "自动项与人工项均完成"));
+      verdictMetricEl.className = `metric verdict ${state}`;
+    }
+
+    function renderError(error) {
+      checksEl.innerHTML = "";
+      emptyEl.style.display = "block";
+      emptyEl.textContent = `检查失败：${error.message || error}`;
+      auditStateEl.textContent = "检查失败";
+      auditStateEl.className = "badge fail";
+      verdictTextEl.textContent = "检查失败";
+      verdictDetailEl.textContent = error.message || String(error);
+      verdictMetricEl.className = "metric verdict fail";
+    }
+
+    function renderCheck(check) {
+      return `
+        <article class="check">
+          <div class="check-top">
+            <div>
+              <div class="check-title">${escapeHtml(check.title)}</div>
+              <div class="check-detail">${escapeHtml(check.detail)}</div>
+            </div>
+            <span class="badge ${check.status}">${statusLabel(check.status)}</span>
+          </div>
+        </article>
+      `;
+    }
+
+    function renderManual() {
+      const saved = getManualState();
+      manualListEl.innerHTML = manualItems.map((item) => `
+        <label class="manual-item">
+          <input type="checkbox" data-manual="${item.id}" ${saved[item.id] ? "checked" : ""}>
+          <div>
+            <strong>${escapeHtml(item.title)}</strong>
+            <small>${escapeHtml(item.detail)}</small>
+          </div>
+        </label>
+      `).join("");
+
+      manualListEl.querySelectorAll("input").forEach((checkbox) => {
+        checkbox.addEventListener("change", () => {
+          const next = getManualState();
+          next[checkbox.dataset.manual] = checkbox.checked;
+          setManualState(next);
+          document.getElementById("manualCount").textContent = getPendingManualCount();
+          if (latestAudit) {
+            render(latestAudit);
+            latestReport = buildReport(latestAudit);
+            reportTextEl.value = latestReport;
+          }
+        });
+      });
+    }
+
+    function renderRows(rows) {
+      if (!rows.length) {
+        rowsEl.innerHTML = `<tr><td colspan="5">暂无数据</td></tr>`;
+        return;
+      }
+      rowsEl.innerHTML = rows.map((row) => `
+        <tr>
+          <td>${escapeHtml(row.type)}</td>
+          <td>${escapeHtml(row.name)}</td>
+          <td><code>${escapeHtml(row.path)}</code></td>
+          <td>${escapeHtml(row.meta)}</td>
+          <td>${escapeHtml(row.status)}</td>
+        </tr>
+      `).join("");
+    }
+
+    function renderPreview(images) {
+      if (!images.length) {
+        previewGridEl.innerHTML = `<div class="empty">暂无吸边图。</div>`;
+        return;
+      }
+      previewGridEl.innerHTML = images.map((item) => {
+        const url = URL.createObjectURL(item.file);
+        return `
+          <div class="preview-card">
+            <img src="${url}" alt="${escapeHtml(item.name)}">
+            <div class="name">${escapeHtml(item.name)}</div>
+            <div class="meta">${item.image.width} x ${item.image.height} · ${formatSize(item.size)}</div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    function buildReport(audit) {
+      const saved = getManualState();
+      const counts = countChecks(audit.checks);
+      const lines = [];
+      lines.push(`交付物验收报告`);
+      lines.push(`文件夹：${audit.rootName || audit.roots.join("、")}`);
+      lines.push(`结果：通过 ${counts.pass} / 警告 ${counts.warn} / 失败 ${counts.fail} / 人工确认 ${manualItems.length}`);
+      lines.push("");
+      lines.push("自动检查：");
+      for (const check of audit.checks) {
+        lines.push(`- [${statusLabel(check.status)}] ${check.title}：${check.detail}`);
+      }
+      lines.push("");
+      lines.push("人工确认：");
+      for (const item of manualItems) {
+        lines.push(`- [${saved[item.id] ? "已确认" : "待确认"}] ${item.title}：${item.detail}`);
+      }
+      lines.push("");
+      lines.push("物料明细：");
+      for (const asset of audit.assets) {
+        lines.push(`- ${asset.type}｜${asset.name}｜${asset.meta}｜${asset.status}｜${asset.path}`);
+      }
+      return lines.join("\n");
+    }
+
+    function pushCheck(checks, status, title, detail) {
+      checks.push({ status, title, detail });
+    }
+
+    function countChecks(checks) {
+      return checks.reduce((acc, check) => {
+        acc[check.status] = (acc[check.status] || 0) + 1;
+        return acc;
+      }, { pass: 0, warn: 0, fail: 0 });
+    }
+
+    function getPendingManualCount() {
+      const saved = getManualState();
+      return manualItems.filter((item) => !saved[item.id]).length;
+    }
+
+    function getManualState() {
+      try {
+        const raw = localStorage.getItem(manualStorageKey);
+        manualStateFallback = raw ? JSON.parse(raw) : manualStateFallback;
+      } catch (error) {
+        return { ...manualStateFallback };
+      }
+      return { ...manualStateFallback };
+    }
+
+    function setManualState(next) {
+      manualStateFallback = { ...next };
+      try {
+        localStorage.setItem(manualStorageKey, JSON.stringify(manualStateFallback));
+      } catch (error) {
+        // Some file:// contexts block localStorage; keep the state in memory for this session.
+      }
+    }
+
+    function normalizePath(path) {
+      return path.replaceAll("\\", "/").replace(/^\/+/, "");
+    }
+
+    function isIgnored(path) {
+      return /(^|\/)(\.DS_Store|Thumbs\.db)$/.test(path) || path.includes("__MACOSX/");
+    }
+
+    function isTopLevel(path) {
+      return path && !path.includes("/");
+    }
+
+    function getTopLevelFolders(items) {
+      const folders = new Set();
+      for (const item of items) {
+        const first = item.relative.split("/")[0];
+        if (first && item.relative.includes("/")) folders.add(first);
+      }
+      return [...folders];
+    }
+
+    function isDeliveryFolderName(name) {
+      if (!name) return false;
+      return /悬浮球物料交付(?:\d{3,4}|\d{1,2}月\d{1,2}日)@.+/.test(name);
+    }
+
+    function getNormalAssetName(name) {
+      return name.replace(/[-_ ]?常规态.*$/, "").trim();
+    }
+
+    function getSuctionAssetName(name) {
+      if (!/\.png$/i.test(name)) return "";
+      const base = name.replace(/\.png$/i, "").trim();
+      const prefix = base.match(/^吸边[-_ ](.+)$/);
+      if (prefix) return prefix[1].trim();
+      const suffix = base.match(/^(.+)[-_ ]吸边$/);
+      if (suffix) return suffix[1].trim();
+      return "";
+    }
+
+    function isSuspiciousName(name, relative) {
+      if (/^(data\.json|data\.html)$/i.test(name)) return false;
+      if (/^demo(\/|$)/i.test(relative)) return false;
+      return /(悬浮球\s*\d+|改\s*\d+|副本|未命名|copy|final|new|test|测试|\d{6,})/i.test(name);
+    }
+
+    async function readJson(file) {
+      try {
+        const text = await file.text();
+        return { value: JSON.parse(text), error: "" };
+      } catch (error) {
+        return { value: null, error: error.message || "JSON 解析失败" };
+      }
+    }
+
+    function getImageInfo(file) {
+      return new Promise((resolve) => {
+        const url = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => {
+          resolve({ width: img.naturalWidth, height: img.naturalHeight });
+          URL.revokeObjectURL(url);
+        };
+        img.onerror = () => {
+          resolve({ width: 0, height: 0 });
+          URL.revokeObjectURL(url);
+        };
+        img.src = url;
+      });
+    }
+
+    function formatSize(bytes) {
+      if (bytes < 1024) return `${bytes}B`;
+      return `${(bytes / 1024).toFixed(bytes > 10 * 1024 ? 1 : 2)}KB`;
+    }
+
+    function statusLabel(status) {
+      return ({ pass: "通过", warn: "警告", fail: "失败", manual: "人工" })[status] || status;
+    }
+
+    function escapeHtml(value) {
+      return String(value)
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    renderManual();
+  </script>
+</body>
+</html>
