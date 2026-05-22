@@ -76,6 +76,12 @@
       margin-bottom: 20px;
     }
 
+    .version {
+      color: var(--muted);
+      font-size: 12px;
+      margin: -10px 0 18px;
+    }
+
     .upload {
       display: block;
       border: 1px dashed #9aa8b7;
@@ -84,6 +90,12 @@
       padding: 16px;
       cursor: pointer;
       margin-bottom: 18px;
+    }
+
+    .upload.drag-over {
+      border-color: var(--blue);
+      background: #edf5ff;
+      box-shadow: inset 0 0 0 1px var(--blue);
     }
 
     .upload strong {
@@ -353,6 +365,129 @@
       gap: 9px;
     }
 
+    .demo-preview {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .demo-preview-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .demo-preview-title strong { font-size: 14px; }
+
+    .demo-preview-title span {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .demo-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(174px, 1fr));
+      gap: 12px;
+    }
+
+    .demo-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: #fff;
+      padding: 10px;
+      min-width: 0;
+    }
+
+    .demo-frame {
+      width: 180px;
+      height: 180px;
+      border: 3px solid #8c3df2;
+      border-radius: 0;
+      background: #fff;
+      overflow: hidden;
+      margin: 0 auto 22px;
+      position: relative;
+    }
+
+    .demo-frame iframe {
+      display: block;
+      width: 100%;
+      height: 100%;
+      border: 0;
+    }
+
+    .demo-safe-frame {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 150px;
+      height: 150px;
+      transform: translate(-50%, -50%);
+      border: 2px solid #8c3df2;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .demo-safe-frame::before,
+    .demo-safe-frame::after,
+    .demo-corner::before,
+    .demo-corner::after {
+      content: "";
+      position: absolute;
+      width: 12px;
+      height: 12px;
+      background: #fff;
+      border: 2px solid #8c3df2;
+      box-sizing: border-box;
+    }
+
+    .demo-safe-frame::before { left: -9px; top: -9px; }
+    .demo-safe-frame::after { right: -9px; top: -9px; }
+    .demo-corner::before { left: -9px; bottom: -9px; }
+    .demo-corner::after { right: -9px; bottom: -9px; }
+
+    .demo-size-tag {
+      position: absolute;
+      left: 50%;
+      bottom: -24px;
+      transform: translateX(-50%);
+      color: #fff;
+      background: #8c3df2;
+      border-radius: 5px;
+      padding: 2px 8px;
+      font-size: 13px;
+      font-weight: 700;
+      line-height: 1.2;
+      white-space: nowrap;
+      pointer-events: none;
+      z-index: 3;
+    }
+
+    .demo-frame-label {
+      color: var(--muted);
+      font-size: 11px;
+      text-align: center;
+      margin-bottom: 8px;
+      line-height: 1.25;
+    }
+
+    .demo-name {
+      font-weight: 650;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .demo-path {
+      color: var(--muted);
+      font-size: 12px;
+      margin-top: 2px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
     .manual-item {
       display: flex;
       gap: 9px;
@@ -461,16 +596,17 @@
     <aside>
       <h1>悬浮球交付物验收工具</h1>
       <p class="lead">选择交付文件夹或 ZIP 后，在本地浏览器内完成检查，不上传文件。</p>
+      <p class="version">版本：2026-05-21.3</p>
 
       <div class="upload-group">
-        <label class="upload">
+        <label class="upload" id="folderDropZone">
           <strong>选择交付文件夹</strong>
-          <span>建议直接选择「XX活动悬浮球物料交付日期@姓名」这一层</span>
+          <span>点击选择，或把交付文件夹拖到这里</span>
           <input id="folderInput" type="file" webkitdirectory directory multiple>
         </label>
-        <label class="upload">
+        <label class="upload" id="zipDropZone">
           <strong>上传 ZIP 压缩包</strong>
-          <span>支持常见 ZIP，文件仍只在本地浏览器内解析</span>
+          <span>点击选择，或把 ZIP 文件拖到这里</span>
           <input id="zipInput" type="file" accept=".zip,application/zip,application/x-zip-compressed">
         </label>
       </div>
@@ -569,6 +705,8 @@
   <script>
     const input = document.getElementById("folderInput");
     const zipInput = document.getElementById("zipInput");
+    const folderDropZone = document.getElementById("folderDropZone");
+    const zipDropZone = document.getElementById("zipDropZone");
     const checksEl = document.getElementById("checks");
     const emptyEl = document.getElementById("emptyState");
     const manualListEl = document.getElementById("manualList");
@@ -589,44 +727,60 @@
       {
         id: "regular-frame",
         title: "常规态首尾帧保持一致",
-        detail: "打开 demo 或 JSON 预览，确认循环衔接无跳变。"
+        detail: "查看上方常规态预览，确认循环衔接无跳变。"
       },
       {
         id: "front-usage",
         title: "常规态首帧正面利用率最大化",
-        detail: "确认首帧主体清楚、未明显留白、符合投放侧展示预期。"
-      },
-      {
-        id: "business-confirmed",
-        title: "已在运营悬浮球内审群确认",
-        detail: "按流程在群内 @吴茜 完成确认。"
+        detail: "查看上方常规态预览首屏，确认主体清楚、未明显留白。"
       }
     ];
 
     let latestAudit = null;
     let latestReport = "";
+    let activeDemoUrls = [];
 
     input.addEventListener("change", async (event) => {
       const files = [...event.target.files];
       if (!files.length) return;
-      setBusy(true);
-      try {
-        latestAudit = await auditFiles(files);
-        render(latestAudit);
-      } catch (error) {
-        console.error(error);
-        renderError(error);
-      } finally {
-        setBusy(false);
-      }
+      await runAudit(() => auditFiles(files));
     });
 
     zipInput.addEventListener("change", async (event) => {
       const file = event.target.files && event.target.files[0];
       if (!file) return;
+      await runAudit(() => auditZip(file));
+    });
+
+    setupDropZone(folderDropZone, async (event) => {
+      const files = await getDroppedFiles(event.dataTransfer);
+      if (!files.length) {
+        throw new Error("没有读取到可审核文件。请改用 ZIP 上传，或点击「选择交付文件夹」选择同一个文件夹。");
+      }
+      const zip = files.find((file) => /\.zip$/i.test(file.name));
+      if (zip && files.length === 1) {
+        await runAudit(() => auditZip(zip));
+        return;
+      }
+      await runAudit(() => auditFiles(files));
+    });
+
+    setupDropZone(zipDropZone, async (event) => {
+      const files = await getDroppedFiles(event.dataTransfer);
+      if (!files.length) {
+        throw new Error("没有读取到 ZIP 文件，请点击上传入口选择 ZIP。");
+      }
+      const zip = files.find((file) => /\.zip$/i.test(file.name));
+      if (!zip) {
+        throw new Error("请拖入 ZIP 压缩包，或把文件夹拖到上方入口");
+      }
+      await runAudit(() => auditZip(zip));
+    });
+
+    async function runAudit(auditTask) {
       setBusy(true);
       try {
-        latestAudit = await auditZip(file);
+        latestAudit = await auditTask();
         render(latestAudit);
       } catch (error) {
         console.error(error);
@@ -634,7 +788,100 @@
       } finally {
         setBusy(false);
       }
-    });
+    }
+
+    function setupDropZone(zone, onDrop) {
+      ["dragenter", "dragover"].forEach((type) => {
+        zone.addEventListener(type, (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          zone.classList.add("drag-over");
+        });
+      });
+      ["dragleave", "drop"].forEach((type) => {
+        zone.addEventListener(type, (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (type === "drop") return;
+          zone.classList.remove("drag-over");
+        });
+      });
+      zone.addEventListener("drop", async (event) => {
+        zone.classList.remove("drag-over");
+        try {
+          await onDrop(event);
+        } catch (error) {
+          console.error(error);
+          renderError(error);
+        }
+      });
+    }
+
+    async function getDroppedFiles(dataTransfer) {
+      const items = [...(dataTransfer.items || [])];
+      const directFiles = [...(dataTransfer.files || [])];
+      const directZip = directFiles.find((file) => /\.zip$/i.test(file.name));
+      if (directZip && directFiles.length === 1) {
+        return [directZip];
+      }
+
+      if (items.length && items.some((item) => item.webkitGetAsEntry)) {
+        const files = [];
+        for (const item of items) {
+          try {
+            const entry = item.webkitGetAsEntry && item.webkitGetAsEntry();
+            if (entry) {
+              files.push(...await readDroppedEntry(entry, ""));
+            }
+          } catch (error) {
+            console.warn("Skip unreadable dropped item", error);
+          }
+        }
+        if (files.length) return files;
+      }
+      return directFiles;
+    }
+
+    async function readDroppedEntry(entry, parentPath) {
+      const path = parentPath ? `${parentPath}/${entry.name}` : entry.name;
+      if (entry.isFile) {
+        try {
+          return [await new Promise((resolve, reject) => {
+            entry.file((file) => {
+              Object.defineProperty(file, "auditRelativePath", { value: path });
+              resolve(file);
+            }, reject);
+          })];
+        } catch (error) {
+          console.warn(`Skip unreadable file: ${path}`, error);
+          return [];
+        }
+      }
+      if (!entry.isDirectory) return [];
+
+      const reader = entry.createReader();
+      const children = [];
+      let batch = [];
+      do {
+        try {
+          batch = await new Promise((resolve, reject) => reader.readEntries(resolve, reject));
+        } catch (error) {
+          console.warn(`Skip unreadable folder: ${path}`, error);
+          return [];
+        }
+        children.push(...batch);
+      } while (batch.length);
+
+      const files = await Promise.all(children.map(async (child) => {
+        try {
+          return await readDroppedEntry(child, path);
+        } catch (error) {
+          console.warn(`Skip dropped child in: ${path}`, error);
+          return [];
+        }
+      }));
+      return files.flat();
+    }
 
     copyReportBtn.addEventListener("click", async () => {
       if (!latestReport) return;
@@ -663,11 +910,15 @@
       const normalized = files
         .map((file) => ({
           file,
-          path: normalizePath(file.webkitRelativePath || file.name),
+          path: normalizePath(file.auditRelativePath || file.webkitRelativePath || file.name),
           size: file.size,
           name: file.name
         }))
         .filter((item) => !isIgnored(item.path));
+
+      if (!normalized.length) {
+        throw new Error("没有读取到可审核文件。请确认选择的是交付文件夹或 ZIP。");
+      }
 
       return auditItems(normalized, "folder");
     }
@@ -681,17 +932,25 @@
     }
 
     async function auditItems(normalized, sourceType, sourceName = "") {
-      const roots = [...new Set(normalized.map((item) => item.path.split("/")[0]).filter(Boolean))];
+      const deliveryRoots = getDeliveryRoots(normalized);
+      const roots = deliveryRoots.length
+        ? deliveryRoots
+        : [...new Set(normalized.map((item) => item.path.split("/")[0]).filter(Boolean))];
       const rootName = roots.length === 1 ? roots[0] : "";
-      const rootPrefix = rootName ? `${rootName}/` : "";
       const topLevel = normalized.map((item) => ({
         ...item,
-        relative: item.path.startsWith(rootPrefix) ? item.path.slice(rootPrefix.length) : item.path
+        relative: getRelativeToDeliveryRoot(item.path, rootName)
       }));
 
-      const normalFolders = getTopLevelFolders(topLevel).filter((name) => /常规态/.test(name));
-      const suctionImages = topLevel.filter((item) => isTopLevel(item.relative) && getSuctionAssetName(item.name));
-      const jsonFiles = topLevel.filter((item) => /\.json$/i.test(item.name));
+      const normalFolders = getFoldersByKeyword(topLevel, "常规态");
+      const suctionImages = topLevel.filter((item) => getSuctionAssetName(item.name) || getSuctionAssetName(item.relative.split("/").pop() || ""));
+      const jsonFiles = topLevel.filter((item) => /\.json$/i.test(item.name) || /\.json$/i.test(item.relative));
+      const embeddedDemoFiles = topLevel
+        .filter((item) => /(^|\/)demo\/data\.html$/i.test(item.relative))
+        .map((item) => ({
+          ...item,
+          previewName: getNormalAssetName(item.relative.split("/")[0] || item.name)
+        }));
       const imageInfos = await Promise.all(
         suctionImages.map(async (item) => ({ ...item, image: await getImageInfo(item.file) }))
       );
@@ -703,9 +962,15 @@
       const suctionNames = suctionImages.map((item) => getSuctionAssetName(item.name));
       const suspicious = topLevel.filter((item) => isSuspiciousName(item.name, item.relative));
       const checks = [];
+      const likelyIncompleteRead = normalized.length <= 1 && !normalFolders.length && !suctionImages.length && !jsonFiles.length;
 
       pushCheck(checks, roots.length === 1 ? "pass" : "fail", "只交付 1 个文件夹",
         roots.length === 1 ? `当前选择：${rootName}` : `检测到 ${roots.length} 个顶层文件夹：${roots.join("、")}`);
+
+      pushCheck(checks, likelyIncompleteRead ? "fail" : "pass", "文件读取完整性",
+        likelyIncompleteRead
+          ? `浏览器只读取到 ${normalized.length} 个文件，未读取到子目录里的 data.json 或吸边 PNG。请点击「选择交付文件夹」重新选择，或改用 ZIP 上传。`
+          : `已读取 ${normalized.length} 个文件`);
 
       pushCheck(checks, isDeliveryFolderName(rootName) ? "pass" : "fail", "交付文件夹命名",
         rootName ? `当前命名：${rootName}` : "未能识别顶层交付文件夹");
@@ -727,25 +992,174 @@
 
       const jsonOver100 = lottieInfos.filter((item) => item.size > 100 * 1024);
       const jsonOver40 = lottieInfos.filter((item) => item.size > 40 * 1024 && item.size <= 100 * 1024);
-      pushCheck(checks, jsonOver100.length ? "fail" : (jsonOver40.length ? "warn" : "pass"), "常规态 JSON 体积",
-        jsonOver100.length
+      pushCheck(checks, !lottieInfos.length ? "fail" : (jsonOver100.length ? "fail" : (jsonOver40.length ? "warn" : "pass")), "常规态 JSON 体积",
+        !lottieInfos.length
+          ? "未读取到任何常规态 JSON"
+          : (jsonOver100.length
           ? `超过 100KB：${jsonOver100.map((item) => `${item.relative} ${formatSize(item.size)}`).join("、")}`
           : (jsonOver40.length
             ? `未超过 100KB，但建议继续压缩：${jsonOver40.map((item) => `${item.relative} ${formatSize(item.size)}`).join("、")}`
-            : `全部低于 40KB，共 ${lottieInfos.length} 个 JSON`));
+            : `全部低于 40KB，共 ${lottieInfos.length} 个 JSON`)));
 
       const invalidJson = lottieInfos.filter((item) => item.lottie.error);
-      pushCheck(checks, invalidJson.length ? "fail" : "pass", "JSON 可解析",
-        invalidJson.length ? invalidJson.map((item) => `${item.relative}: ${item.lottie.error}`).join("；") : "全部 JSON 可正常解析");
+      pushCheck(checks, !lottieInfos.length || invalidJson.length ? "fail" : "pass", "JSON 可解析",
+        !lottieInfos.length
+          ? "未读取到 JSON，无法解析"
+          : (invalidJson.length ? invalidJson.map((item) => `${item.relative}: ${item.lottie.error}`).join("；") : "全部 JSON 可正常解析"));
 
       const badSize = imageInfos.filter((item) => item.image.width !== 99 || item.image.height !== 300);
-      pushCheck(checks, badSize.length ? "fail" : "pass", "吸边态尺寸 99 x 300",
-        badSize.length
+      pushCheck(checks, !imageInfos.length || badSize.length ? "fail" : "pass", "吸边态尺寸 99 x 300",
+        !imageInfos.length
+          ? "未读取到任何吸边 PNG"
+          : (badSize.length
           ? badSize.map((item) => `${item.relative}: ${item.image.width} x ${item.image.height}`).join("；")
-          : `全部 ${imageInfos.length} 张吸边图符合尺寸`);
+          : `全部 ${imageInfos.length} 张吸边图符合尺寸`));
 
       const assets = buildAssets(normalFolders, imageInfos, lottieInfos);
-      return { rootName, roots, checks, assets, images: imageInfos, sourceType, sourceName };
+      const demos = buildDemoPreviews(embeddedDemoFiles, lottieInfos);
+      return { rootName, roots, checks, assets, images: imageInfos, demos, sourceType, sourceName, fileCount: normalized.length };
+    }
+
+    function buildDemoPreviews(embeddedDemoFiles, lottieInfos) {
+      const demos = [];
+      const demoNames = new Set();
+
+      for (const item of lottieInfos) {
+        if (item.lottie.error || !item.lottie.value) continue;
+        const folderName = item.relative.split("/")[0] || item.name;
+        const previewName = getNormalAssetName(folderName);
+        if (demoNames.has(previewName)) continue;
+
+        const html = createLottiePreviewHtml(item.lottie.value, previewName);
+        const file = new File([html], `${previewName || "常规态"}-preview.html`, { type: "text/html" });
+        demos.push({
+          file,
+          path: `${item.relative}#preview`,
+          relative: `${item.relative} 生成预览`,
+          size: file.size,
+          name: file.name,
+          previewName
+        });
+        demoNames.add(previewName);
+      }
+
+      for (const item of embeddedDemoFiles) {
+        if (demoNames.has(item.previewName)) continue;
+        demos.push(item);
+        demoNames.add(item.previewName);
+      }
+
+      return demos;
+    }
+
+    function createLottiePreviewHtml(animationData, title) {
+      const safeTitle = escapeHtml(title || "常规态预览");
+      const safeJson = JSON.stringify(animationData).replaceAll("<", "\\u003c");
+      return `<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    html, body { margin: 0; width: 100%; height: 100%; background: #fff; overflow: hidden; }
+    #lottie { width: 100%; height: 100%; cursor: pointer; }
+    .fallback { box-sizing: border-box; width: 100%; height: 100%; display: grid; place-items: center; padding: 12px; color: #667085; font: 12px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; text-align: center; }
+  </style>
+</head>
+<body>
+  <div id="lottie"><div class="fallback">正在加载首帧...</div></div>
+  <script>
+    var animationData = ${safeJson};
+    var anim = null;
+    var hasPlayed = false;
+    var playerUrls = [
+      'https://cdn.jsdelivr.net/npm/lottie-web@5.12.2/build/player/lottie.min.js',
+      'https://unpkg.com/lottie-web@5.12.2/build/player/lottie.min.js',
+      'https://cdnjs.cloudflare.com/ajax/libs/bodymovin/5.12.2/lottie.min.js'
+    ];
+    function showFallback(text) {
+      document.body.innerHTML = '<div class="fallback">' + text + '<\\/div>';
+    }
+    function setHint(text) {
+      try {
+        window.parent.postMessage({ type: 'delivery-preview-state', title: ${JSON.stringify(safeTitle)}, text: text }, '*');
+      } catch (error) {}
+    }
+    function loadScript(url) {
+      return new Promise(function (resolve, reject) {
+        var done = false;
+        var script = document.createElement('script');
+        var timer = setTimeout(function () {
+          if (done) return;
+          done = true;
+          script.remove();
+          reject(new Error('timeout'));
+        }, 3500);
+        script.onload = function () {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          resolve();
+        };
+        script.onerror = function () {
+          if (done) return;
+          done = true;
+          clearTimeout(timer);
+          reject(new Error('load failed'));
+        };
+        script.src = url;
+        document.head.appendChild(script);
+      });
+    }
+    async function ensureLottie() {
+      for (var i = 0; i < playerUrls.length; i += 1) {
+        try {
+          await loadScript(playerUrls[i]);
+          if (window.lottie) return true;
+        } catch (error) {}
+      }
+      return false;
+    }
+    window.addEventListener('load', async function () {
+      var ok = await ensureLottie();
+      if (!ok) {
+        showFallback('预览播放器加载失败：当前网络无法访问 Lottie 播放器 CDN');
+        return;
+      }
+      try {
+        document.getElementById('lottie').innerHTML = '';
+        anim = window.lottie.loadAnimation({
+          container: document.getElementById('lottie'),
+          renderer: 'svg',
+          loop: false,
+          autoplay: false,
+          animationData: animationData
+        });
+        anim.addEventListener('DOMLoaded', function () {
+          anim.goToAndStop(animationData.ip || 0, true);
+          setHint('点击播放 1 次');
+        });
+        anim.addEventListener('complete', function () {
+          hasPlayed = true;
+          var endFrame = Math.max((animationData.op || anim.totalFrames || 1) - 1, animationData.ip || 0);
+          anim.goToAndStop(endFrame, true);
+          setHint('已播完，停在末帧；再点重播');
+        });
+        document.getElementById('lottie').addEventListener('click', function () {
+          if (!anim) return;
+          var startFrame = animationData.ip || 0;
+          var endFrame = Math.max((animationData.op || anim.totalFrames || 1) - 1, startFrame);
+          setHint('播放中...');
+          anim.stop();
+          anim.playSegments([startFrame, endFrame], true);
+        });
+      } catch (error) {
+        showFallback('预览渲染失败：' + (error && error.message ? error.message : '未知错误'));
+      }
+    });
+  <\/script>
+</body>
+</html>`;
     }
 
     async function readZipEntries(zipFile) {
@@ -870,8 +1284,10 @@
     function render(audit) {
       emptyEl.style.display = "none";
       checksEl.innerHTML = audit.checks.map(renderCheck).join("");
-      folderNameEl.textContent = audit.rootName ? `当前文件夹：${audit.rootName}` : "当前选择包含多个顶层文件夹";
-      renderManual();
+      folderNameEl.textContent = audit.rootName
+        ? `当前文件夹：${audit.rootName}（读取 ${audit.fileCount || 0} 个文件）`
+        : `当前选择包含多个顶层文件夹（读取 ${audit.fileCount || 0} 个文件）`;
+      renderManual(audit);
       renderRows(audit.assets);
       renderPreview(audit.images);
       latestReport = buildReport(audit);
@@ -896,14 +1312,26 @@
     }
 
     function renderError(error) {
+      const message = humanizeError(error);
       checksEl.innerHTML = "";
       emptyEl.style.display = "block";
-      emptyEl.textContent = `检查失败：${error.message || error}`;
+      emptyEl.textContent = `检查失败：${message}`;
       auditStateEl.textContent = "检查失败";
       auditStateEl.className = "badge fail";
       verdictTextEl.textContent = "检查失败";
-      verdictDetailEl.textContent = error.message || String(error);
+      verdictDetailEl.textContent = message;
       verdictMetricEl.className = "metric verdict fail";
+    }
+
+    function humanizeError(error) {
+      const message = error && error.message ? error.message : String(error);
+      if (/URI supplied to the API was malformed|malformed/i.test(message)) {
+        return "拖拽读取失败：浏览器无法解析某个文件路径。请改用 ZIP 上传，或点击「选择交付文件夹」选择同一个文件夹。";
+      }
+      if (/readEntries|FileError|NotFoundError|SecurityError/i.test(message)) {
+        return "拖拽读取失败：浏览器限制了部分文件访问。请改用 ZIP 上传，或点击「选择交付文件夹」选择同一个文件夹。";
+      }
+      return message;
     }
 
     function renderCheck(check) {
@@ -920,9 +1348,9 @@
       `;
     }
 
-    function renderManual() {
+    function renderManual(audit = null) {
       const saved = getManualState();
-      manualListEl.innerHTML = manualItems.map((item) => `
+      manualListEl.innerHTML = `${renderDemoPreviews(audit && audit.demos ? audit.demos : [])}${manualItems.map((item) => `
         <label class="manual-item">
           <input type="checkbox" data-manual="${item.id}" ${saved[item.id] ? "checked" : ""}>
           <div>
@@ -930,7 +1358,7 @@
             <small>${escapeHtml(item.detail)}</small>
           </div>
         </label>
-      `).join("");
+      `).join("")}`;
 
       manualListEl.querySelectorAll("input").forEach((checkbox) => {
         checkbox.addEventListener("change", () => {
@@ -945,6 +1373,49 @@
           }
         });
       });
+    }
+
+    function renderDemoPreviews(demos) {
+      activeDemoUrls.forEach((url) => URL.revokeObjectURL(url));
+      activeDemoUrls = [];
+      if (!demos.length) {
+        return `
+          <div class="demo-preview">
+            <div class="demo-preview-title">
+              <strong>常规态预览</strong>
+              <span>选择交付物后显示</span>
+            </div>
+            <div class="empty">暂无常规态 demo 预览。</div>
+          </div>
+        `;
+      }
+
+      const cards = demos.map((item) => {
+        const url = URL.createObjectURL(item.file);
+        activeDemoUrls.push(url);
+        return `
+          <div class="demo-card">
+            <div class="demo-frame">
+              <iframe src="${url}" title="${escapeHtml(item.previewName)}" sandbox="allow-scripts allow-same-origin"></iframe>
+              <div class="demo-safe-frame"><span class="demo-corner"></span></div>
+              <div class="demo-size-tag">150 x 150</div>
+            </div>
+            <div class="demo-frame-label">外框 180 动效范围，内框 150 首帧安全区；点击画面播放 1 次</div>
+            <div class="demo-name">${escapeHtml(item.previewName || item.name)}</div>
+            <div class="demo-path">${escapeHtml(item.relative)}</div>
+          </div>
+        `;
+      }).join("");
+
+      return `
+        <div class="demo-preview">
+          <div class="demo-preview-title">
+            <strong>常规态预览</strong>
+            <span>用于确认首尾帧和首屏利用率</span>
+          </div>
+          <div class="demo-grid">${cards}</div>
+        </div>
+      `;
     }
 
     function renderRows(rows) {
@@ -1050,6 +1521,38 @@
 
     function isTopLevel(path) {
       return path && !path.includes("/");
+    }
+
+    function getDeliveryRoots(items) {
+      const roots = new Set();
+      for (const item of items) {
+        const root = item.path.split("/").find((segment) => /悬浮球物料交付/.test(segment));
+        if (root) roots.add(root);
+      }
+      return [...roots];
+    }
+
+    function getRelativeToDeliveryRoot(path, rootName) {
+      const parts = path.split("/").filter(Boolean);
+      if (rootName) {
+        const rootIndex = parts.indexOf(rootName);
+        if (rootIndex >= 0) return parts.slice(rootIndex + 1).join("/");
+      }
+      if (parts.length > 1) return parts.slice(1).join("/");
+      return path;
+    }
+
+    function getFoldersByKeyword(items, keyword) {
+      const folders = new Set();
+      for (const item of items) {
+        const candidates = [item.relative, item.path].filter(Boolean);
+        for (const candidate of candidates) {
+          for (const segment of candidate.split("/")) {
+            if (segment.includes(keyword)) folders.add(segment);
+          }
+        }
+      }
+      return [...folders];
     }
 
     function getTopLevelFolders(items) {
