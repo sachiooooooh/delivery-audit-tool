@@ -651,7 +651,7 @@
     <aside>
       <h1>悬浮球交付物验收工具</h1>
       <p class="lead">选择交付文件夹或 ZIP 后，在本地浏览器内完成检查，不上传文件。</p>
-      <p class="version">版本：2026-05-21.3</p>
+      <p class="version">版本：2026-05-29</p>
 
       <div class="upload-group">
         <label class="upload" id="folderDropZone">
@@ -668,7 +668,7 @@
 
       <h3>当前规则</h3>
       <div class="rule-list">
-        <div class="rule-chip"><span class="dot"></span><span>只交付 1 个文件夹，文件夹内包含常规态和吸边态。</span></div>
+        <div class="rule-chip"><span class="dot"></span><span>只交付 1 个文件夹，常规态和吸边态成对交付（"常规"/"常规态" 和 "吸边"/"吸边态"/"吸附"/"吸附态" 命名都接受）。</span></div>
         <div class="rule-chip"><span class="dot"></span><span>交付文件夹命名包含：活动名 + 悬浮球 + 日期（4月24日 / 0424 / 4-24 等） + @负责人。</span></div>
         <div class="rule-chip"><span class="dot"></span><span>文件名可读，避免「悬浮球111」「福袋改2」等无意义命名。</span></div>
         <div class="rule-chip"><span class="dot"></span><span>常规态 JSON 不超过 100KB，建议压缩到 40KB 以下。</span></div>
@@ -997,7 +997,8 @@
         relative: getRelativeToDeliveryRoot(item.path, rootName)
       }));
 
-      const normalFolders = getFoldersByKeyword(topLevel, "常规态");
+      // 同时识别 "常规" 和 "常规态" 两种写法
+      const normalFolders = getFoldersByKeyword(topLevel, "常规");
       const suctionImages = topLevel.filter((item) => getSuctionAssetName(item.name) || getSuctionAssetName(item.relative.split("/").pop() || ""));
       const jsonFiles = topLevel.filter((item) => /\.json$/i.test(item.name) || /\.json$/i.test(item.relative));
       const embeddedDemoFiles = topLevel
@@ -1643,15 +1644,22 @@
     }
 
     function getNormalAssetName(name) {
-      return name.replace(/[-_ ]?常规态.*$/, "").trim();
+      // 识别 "常规" 或 "常规态"，前缀/后缀写法都接受
+      // 例如：红包-常规态 / 红包-常规 / 常规态-红包 / 常规-红包 → 红包
+      return name
+        .replace(/^常规态?[-_ ]+/, "")     // 去前缀
+        .replace(/[-_ ]+常规态?.*$/, "")   // 去后缀
+        .trim();
     }
 
     function getSuctionAssetName(name) {
       if (!/\.png$/i.test(name)) return "";
       const base = name.replace(/\.png$/i, "").trim();
-      const prefix = base.match(/^吸边[-_ ](.+)$/);
+      // 识别 吸边/吸边态/吸附/吸附态，前缀/后缀写法都接受
+      const stateKw = "吸(?:边|附)态?";  // 吸边 | 吸边态 | 吸附 | 吸附态
+      const prefix = base.match(new RegExp(`^${stateKw}[-_ ](.+)$`));
       if (prefix) return prefix[1].trim();
-      const suffix = base.match(/^(.+)[-_ ]吸边$/);
+      const suffix = base.match(new RegExp(`^(.+)[-_ ]${stateKw}$`));
       if (suffix) return suffix[1].trim();
       return "";
     }
